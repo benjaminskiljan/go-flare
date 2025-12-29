@@ -112,7 +112,7 @@ jobs:
         #if: github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
-          name: dist-bin
+          name: ${{ env.ARTIFACT_NAME }}
           path: |
             ${{ env.ARTIFACT_NAME }}
 
@@ -152,7 +152,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v7
         with:
-          pattern: ${{ needs.build.outputs.artifact-name }}
+          pattern: ${{ needs.build.outputs.artifact-name }}*
           merge-multiple: true
       
       - uses: slsa-framework/slsa-verifier/actions/installer@v2.7.1
