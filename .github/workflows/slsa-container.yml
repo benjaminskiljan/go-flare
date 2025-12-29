@@ -1,0 +1,98 @@
+name: SLSA generic container generator
+
+on:
+  workflow_dispatch:
+  push:
+  #  branches: [ "main", "feature/**" ]
+  #  tags: [ "v*" ]
+
+jobs:
+  build-and-push:
+    name: Build & Push
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      USE_DOCKER_HUB: false #true
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: docker/setup-qemu-action@v3
+    - uses: docker/setup-buildx-action@v3
+
+    - run: echo "IMAGE_TAG=dev" >> $GITHUB_ENV
+      if: github.ref_name == 'main' || startsWith(github.ref_name, 'feature/')
+
+    - run: echo "IMAGE_TAG=${GITHUB_REF##*/}" >> $GITHUB_ENV
+      if: startsWith(github.ref, 'refs/tags/v')
+
+    - name: Login to ghcr.io
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta-ghcr
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v3
+      id: build
+      with:
+        push: true
+        tags: ${{ steps.meta-ghcr.outputs.tags }}
+        labels: ${{ steps.meta-ghcr.outputs.labels }}
+
+    - name: Output image
+      id: image
+      run: |
+        # NOTE: Set the image as an output because the `env` context is not
+        # available to the inputs of a reusable workflow call.
+        image_name="${IMAGE_REGISTRY}/${IMAGE_NAME}"
+        echo "image=ghcr.io/${{ github.repository }}" >> "$GITHUB_OUTPUT"
+
+  # This step calls the container workflow to generate provenance and push it to
+  # the container registry.
+  provenance:
+    needs: [build-and-push]
+    permissions:
+      actions: read # for detecting the Github Actions environment.
+      id-token: write # for creating OIDC tokens for signing.
+      packages: write # for uploading attestations.
+    #if: startsWith(github.ref, 'refs/tags/')
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      image: ${{ needs.build-and-push.outputs.image }}
+      digest: ${{ needs.build-and-push.outputs.digest }}
+      registry-username: ${{ github.actor }}
+    secrets:
+      registry-password: ${{ secrets.GITHUB_TOKEN }}
+
+  verify:
+    needs: [build-and-push, provenance]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v7 # download attestation
+
+      - uses: slsa-framework/slsa-verifier/actions/installer@v2.7.1
+
+      - name: Verify image provenance
+        run: |
+          slsa-verifier verify-image \
+            --provenance-path ${{ github.workspace }}/provenance/attestation.intoto.jsonl \
+            --source-uri github.com/${{ github.repository }} \
+            ${{ needs.build-and-push.outputs.image }}:dev@${{ needs.build-and-push.outputs.digest }}
