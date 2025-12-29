@@ -64,17 +64,17 @@ jobs:
           ./scripts/build.sh
 
       - name: Package build for release
-        if: github.ref_type == 'tag'
+        #if: github.ref_type == 'tag'
         run: |
           cd avalanchego/build
           zip -r ../../${{ env.ARTIFACT_NAME }} .
 
       - name: Install Cosign
-        if: github.ref_type == 'tag'
+        #if: github.ref_type == 'tag'
         uses: sigstore/cosign-installer@v3.8.1
 
       - name: Sign release binary
-        if: github.ref_type == 'tag'
+        #if: github.ref_type == 'tag'
         shell: bash
         env:
           COSIGN_EXPERIMENTAL: 1
@@ -85,7 +85,7 @@ jobs:
             ${{ env.ARTIFACT_NAME }}
 
       - name: Verify release binary signature
-        if: github.ref_type == 'tag'
+        #if: github.ref_type == 'tag'
         shell: bash
         env:
           COSIGN_EXPERIMENTAL: 1
@@ -99,13 +99,13 @@ jobs:
 
       - name: Release
         uses: softprops/action-gh-release@v1
-        if: github.ref_type == 'tag'
+        #if: github.ref_type == 'tag'
         with:
           body: "TODO"
           files: ${{ env.ARTIFACT_NAME }}*
 
       - name: Archive production artifacts
-        if: github.ref_type == 'tag'
+        #if: github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: dist-bin
