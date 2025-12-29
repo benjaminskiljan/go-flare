@@ -97,12 +97,12 @@ jobs:
             --signature ${{ env.ARTIFACT_NAME }}.sig \
             ${{ env.ARTIFACT_NAME }}
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        #if: github.ref_type == 'tag'
-        with:
-          body: "TODO"
-          files: ${{ env.ARTIFACT_NAME }}*
+      #- name: Release
+      #  uses: softprops/action-gh-release@v1
+      #  if: github.ref_type == 'tag'
+      #  with:
+      #    body: "TODO"
+      #    files: ${{ env.ARTIFACT_NAME }}*
 
       - name: Archive production artifacts
         #if: github.ref_type == 'tag'
