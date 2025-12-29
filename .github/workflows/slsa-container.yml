@@ -45,11 +45,14 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: ghcr.io/${{ github.repository }}
+        tags: |
+          type=raw,value=${{ env.IMAGE_TAG }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v3
       id: build
       with:
+        context: .
         push: true
         tags: ${{ steps.meta-ghcr.outputs.tags }}
         labels: ${{ steps.meta-ghcr.outputs.labels }}
