@@ -28,6 +28,7 @@ jobs:
       id-token: write
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
+      artifact-name: ${{ steps.release-vars.outputs.artifact-name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -38,14 +39,17 @@ jobs:
           go-version: ${{ env.go_version }}
 
       - name: Set release variables
+        id: release-vars
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             RELEASE_TAG="${{ github.ref_name }}"
           else
             RELEASE_TAG="dev"
           fi
+          ARTIFACT_NAME="go-flare-${RELEASE_TAG}-linux-amd64.zip"
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
-          echo "ARTIFACT_NAME=go-flare-${RELEASE_TAG}-linux-amd64.zip" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
+          echo "artifact-name=${ARTIFACT_NAME}" >> $GITHUB_OUTPUT
 
       - run: sudo apt-get update -y && sudo apt-get install -y rsync
 
@@ -143,7 +147,7 @@ jobs:
       upload-assets: true # Optional: Upload to a new release
 
   verify:
-    needs: [provenance]
+    needs: [build, provenance]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v4
@@ -155,6 +159,6 @@ jobs:
       - name: Verify artifact
         run: |
           slsa-verifier verify-artifact \
-            --provenance-path ${{ env.ARTIFACT_NAME }}.intoto.jsonl \
+            --provenance-path ${{ needs.build.outputs.artifact-name }}.intoto.jsonl \
             --source-uri github.com/${{ github.repository }} \
-            ${{ env.ARTIFACT_NAME }}
+            ${{ needs.build.outputs.artifact-name }}
