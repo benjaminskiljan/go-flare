@@ -2,9 +2,9 @@ name: binaries
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-    tags:
+  #push:
+    #branches:
+    #tags:
 
 env:
   go_version: 1.22.12
