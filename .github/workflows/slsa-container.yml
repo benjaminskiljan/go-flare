@@ -17,7 +17,8 @@ jobs:
     env:
       USE_DOCKER_HUB: false #true
     outputs:
-      image: ${{ steps.image.outputs.image }}
+      image: ${{ steps.meta-ghcr.outputs.tags }}
+      tag: ${{ steps.meta-ghcr.outputs.version }}
       digest: ${{ steps.build.outputs.digest }}
 
     steps:
@@ -56,14 +57,6 @@ jobs:
         push: true
         tags: ${{ steps.meta-ghcr.outputs.tags }}
         labels: ${{ steps.meta-ghcr.outputs.labels }}
-
-    - name: Output image
-      id: image
-      run: |
-        # NOTE: Set the image as an output because the `env` context is not
-        # available to the inputs of a reusable workflow call.
-        image_name="${IMAGE_REGISTRY}/${IMAGE_NAME}"
-        echo "image=ghcr.io/${{ github.repository }}" >> "$GITHUB_OUTPUT"
 
   # This step calls the container workflow to generate provenance and push it to
   # the container registry.
