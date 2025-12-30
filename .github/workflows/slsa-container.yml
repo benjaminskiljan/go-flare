@@ -79,7 +79,6 @@ jobs:
       image: ${{ needs.build-and-push.outputs.image }}
       digest: ${{ needs.build-and-push.outputs.digest }}
       registry-username: ${{ github.actor }}
-      upload-assets: true
     secrets:
       registry-password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -96,7 +95,6 @@ jobs:
 
       - name: Verify image provenance
         run: |
-          slsa-verifier verify-image \
-            --provenance-path ${{ github.workspace }}/provenance/attestation.intoto.jsonl \
+          slsa-verifier verify-image ${{ needs.build-and-push.outputs.image }}:dev@${{ needs.build-and-push.outputs.digest }} \
             --source-uri github.com/${{ github.repository }} \
-            ${{ needs.build-and-push.outputs.image }}:dev@${{ needs.build-and-push.outputs.digest }}
+            --source-branch main \
