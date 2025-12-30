@@ -55,6 +55,7 @@ jobs:
       with:
         context: .
         push: true
+        platforms: linux/amd64,linux/arm64
         tags: ${{ steps.meta-ghcr.outputs.tags }}
         labels: ${{ steps.meta-ghcr.outputs.labels }}
 
@@ -81,13 +82,12 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    if: github.ref_name == 'main' || startsWith(github.ref_name, 'feature/')
     steps:
-      - uses: actions/download-artifact@v7 # download attestation
-
       - uses: slsa-framework/slsa-verifier/actions/installer@v2.7.1
 
       - name: Verify image provenance
         run: |
           slsa-verifier verify-image ${{ needs.build-and-push.outputs.image }}@${{ needs.build-and-push.outputs.digest }} \
             --source-uri github.com/${{ github.repository }} \
-            --source-branch main \
+            --source-branch ${{ github.ref_name }} \
