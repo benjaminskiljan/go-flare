@@ -88,6 +88,6 @@ jobs:
 
       - name: Verify image provenance
         run: |
-          slsa-verifier verify-image ${{ needs.build-and-push.outputs.image }}:dev@${{ needs.build-and-push.outputs.digest }} \
+          slsa-verifier verify-image ${{ needs.build-and-push.outputs.image }}@${{ needs.build-and-push.outputs.digest }} \
             --source-uri github.com/${{ github.repository }} \
             --source-branch main \
