@@ -54,9 +54,9 @@ jobs:
       with:
         images: |
           ghcr.io/${{ github.repository }}
-          ${{ secrets.DOCKER_HUB_REPO }},enable=${{ env.USE_DOCKER_HUB }}
+          dockerhub-repo,enable=${{ env.USE_DOCKER_HUB }}       # final version: ${{ secrets.DOCKER_HUB_REPO }}
         tags: |
-          type=semver,pattern=v{{version}},value=${{ env.IMAGE_TAG }}
+          type=raw,value=${{ env.IMAGE_TAG }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
@@ -91,7 +91,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    if: github.ref_name == 'main'
+    #if: github.ref_name == 'main'
     steps:
       - uses: slsa-framework/slsa-verifier/actions/installer@v2.7.1
 
