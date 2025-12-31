@@ -106,8 +106,8 @@ jobs:
     strategy:
       matrix:
         digest:
-          - standard: ${{ needs.build-and-push.outputs.digest-standard }}
-          - distroless: ${{ needs.build-and-push.outputs.digest-distroless }}
+          - ${{ needs.build-and-push.outputs.digest-standard }}
+          - ${{ needs.build-and-push.outputs.digest-distroless }}
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
     with:
       image: ${{ needs.build-and-push.outputs.ghcr-repo }}
@@ -126,8 +126,8 @@ jobs:
     strategy:
       matrix:
         digest:
-          - standard: ${{ needs.build-and-push.outputs.digest-standard }}
-          - distroless: ${{ needs.build-and-push.outputs.digest-distroless }}
+          - ${{ needs.build-and-push.outputs.digest-standard }}
+          - ${{ needs.build-and-push.outputs.digest-distroless }}
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
     with:
       image: blank
@@ -147,8 +147,8 @@ jobs:
     strategy:
       matrix:
         digest:
-          - standard: ${{ needs.build-and-push.outputs.digest-standard }}
-          - distroless: ${{ needs.build-and-push.outputs.digest-distroless }}
+          - ${{ needs.build-and-push.outputs.digest-standard }}
+          - ${{ needs.build-and-push.outputs.digest-distroless }}
     steps:
       - uses: slsa-framework/slsa-verifier/actions/installer@v2.7.1
 
@@ -168,8 +168,8 @@ jobs:
     strategy:
       matrix:
         digest:
-          - standard: ${{ needs.build-and-push.outputs.digest-standard }}
-          - distroless: ${{ needs.build-and-push.outputs.digest-distroless }}
+          - ${{ needs.build-and-push.outputs.digest-standard }}
+          - ${{ needs.build-and-push.outputs.digest-distroless }}
     steps:
       - uses: slsa-framework/slsa-verifier/actions/installer@v2.7.1
 
