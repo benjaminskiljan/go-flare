@@ -58,7 +58,7 @@ jobs:
       with:
         images: |
           ${{ env.GHCR_REPO }}
-          dockerhub-repo,enable=${{ env.USE_DOCKER_HUB }}       # final version: ${{ secrets.DOCKER_HUB_REPO }}
+          ${{ secrets.DOCKER_HUB_REPO }},enable=${{ env.USE_DOCKER_HUB }}
         tags: |
           type=raw,value=${{ env.IMAGE_TAG }}
 
@@ -68,7 +68,7 @@ jobs:
       with:
         images: |
           ${{ env.GHCR_REPO }}
-          dockerhub-repo,enable=${{ env.USE_DOCKER_HUB }}       # final version: ${{ secrets.DOCKER_HUB_REPO }}
+          ${{ secrets.DOCKER_HUB_REPO }},enable=${{ env.USE_DOCKER_HUB }}
         tags: |
           type=raw,value=${{ env.IMAGE_TAG }}-dless
 
