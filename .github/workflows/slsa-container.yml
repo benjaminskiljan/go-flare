@@ -110,8 +110,8 @@ jobs:
           - distroless: ${{ needs.build-and-push.outputs.digest-distroless }}
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
     with:
-      digest: ${{ matrix.digest }}
       image: ${{ needs.build-and-push.outputs.ghcr-repo }}
+      digest: ${{ matrix.digest }}
       registry-username: ${{ github.actor }}
     secrets:
       registry-password: ${{ secrets.GITHUB_TOKEN }}
@@ -130,6 +130,7 @@ jobs:
           - distroless: ${{ needs.build-and-push.outputs.digest-distroless }}
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
     with:
+      image: blank
       digest: ${{ matrix.digest }}
     secrets:
       image: ${{ secrets.DOCKER_HUB_REPO }}
