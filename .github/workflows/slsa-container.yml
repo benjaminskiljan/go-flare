@@ -9,7 +9,7 @@ on:
 env:
   USE_DOCKER_HUB: true
   GHCR_REPO: ghcr.io/${{ github.repository }}
-  DOCKERHUB_REPO: benjaminskiljanflare/go-flare
+  DOCKERHUB_REPO: docker.io/benjaminskiljanflare/go-flare
 
 jobs:
   build-and-push:
