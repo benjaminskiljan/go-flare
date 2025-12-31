@@ -6,6 +6,10 @@ on:
   #  branches: [ "main", "feature/**" ]
   #  tags: [ "v*" ]
 
+env:
+  USE_DOCKER_HUB: false #true
+  GHCR_REPO: ghcr.io/${{ github.repository }}
+
 jobs:
   build-and-push:
     name: Build & Push
@@ -14,12 +18,12 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    env:
-      USE_DOCKER_HUB: false #true
     outputs:
-      image: ${{ steps.meta-ghcr.outputs.tags }}
-      tag: ${{ steps.meta-ghcr.outputs.version }}
-      digest: ${{ steps.build.outputs.digest }}
+      use-docker-hub: ${{ env.USE_DOCKER_HUB }}
+      ghcr-repo: ${{ env.GHCR_REPO }}
+      ###################################################################
+      digest-standard: ${{ steps.build-standard.outputs.digest }}
+      digest-distroless: ${{ steps.build-distroless.outputs.digest }}
 
     steps:
     - uses: actions/checkout@v6
@@ -48,55 +52,128 @@ jobs:
         username: ${{ secrets.DOCKER_HUB_UID }}
         password: ${{ secrets.DOCKER_HUB_PAT }}
 
-    - name: Extract metadata (tags, labels) for Docker
-      id: meta-ghcr
+    - name: Extract metadata for standard image
+      id: metadata-standard
       uses: docker/metadata-action@v5
       with:
         images: |
-          ghcr.io/${{ github.repository }}
+          ${{ env.GHCR_REPO }}
           dockerhub-repo,enable=${{ env.USE_DOCKER_HUB }}       # final version: ${{ secrets.DOCKER_HUB_REPO }}
         tags: |
           type=raw,value=${{ env.IMAGE_TAG }}
 
-    - name: Build and push Docker image
+    - name: Extract metadata for distroless image
+      id: metadata-distroless
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          ${{ env.GHCR_REPO }}
+          dockerhub-repo,enable=${{ env.USE_DOCKER_HUB }}       # final version: ${{ secrets.DOCKER_HUB_REPO }}
+        tags: |
+          type=raw,value=${{ env.IMAGE_TAG }}-dless
+
+    - name: Build and push standard image
       uses: docker/build-push-action@v6
-      id: build
+      id: build-standard
       with:
         context: .
+        file: ./Dockerfile
         push: true
         platforms: linux/amd64 #,linux/arm64
-        tags: ${{ steps.meta-ghcr.outputs.tags }}
-        labels: ${{ steps.meta-ghcr.outputs.labels }}
+        tags: ${{ steps.metadata-standard.outputs.tags }}
+        labels: ${{ steps.metadata-standard.outputs.labels }}
+
+    - name: Build and push distroless image
+      uses: docker/build-push-action@v6
+      id: build-distroless
+      with:
+        context: .
+        file: ./Dockerfile.dless
+        push: true
+        platforms: linux/amd64 #,linux/arm64
+        tags: ${{ steps.metadata-distroless.outputs.tags }}
+        labels: ${{ steps.metadata-distroless.outputs.labels }}
+
 
   # This step calls the container workflow to generate provenance and push it to
   # the container registry.
-  provenance:
+  provenance-ghcr:
     needs: [build-and-push]
     permissions:
       actions: read # for detecting the Github Actions environment.
       id-token: write # for creating OIDC tokens for signing.
       packages: write # for uploading attestations.
-    #if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        digest:
+          - standard: ${{ needs.build-and-push.outputs.digest-standard }}
+          - distroless: ${{ needs.build-and-push.outputs.digest-distroless }}
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
     with:
-      image: ${{ needs.build-and-push.outputs.image }}
-      digest: ${{ needs.build-and-push.outputs.digest }}
+      digest: ${{ matrix.digest }}
+      image: ${{ needs.build-and-push.outputs.ghcr-repo }}
       registry-username: ${{ github.actor }}
     secrets:
       registry-password: ${{ secrets.GITHUB_TOKEN }}
 
-  verify:
-    needs: [build-and-push, provenance]
+  provenance-dockerhub:
+    needs: [build-and-push]
+    if: ${{ needs.build-and-push.outputs.use-docker-hub == 'true' }} # can't use 'env' context
+    permissions:
+      actions: read # for detecting the Github Actions environment.
+      id-token: write # for creating OIDC tokens for signing.
+      packages: write # for uploading attestations.
+    strategy:
+      matrix:
+        digest:
+          - standard: ${{ needs.build-and-push.outputs.digest-standard }}
+          - distroless: ${{ needs.build-and-push.outputs.digest-distroless }}
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      digest: ${{ matrix.digest }}
+    secrets:
+      image: ${{ secrets.DOCKER_HUB_REPO }}
+      registry-username: ${{ secrets.DOCKER_HUB_UID }}
+      registry-password: ${{ secrets.DOCKER_HUB_PAT }}
+    
+  verify-ghcr:
+    needs: [build-and-push, provenance-ghcr]
+    #if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
-    #if: github.ref_name == 'main'
+    strategy:
+      matrix:
+        digest:
+          - standard: ${{ needs.build-and-push.outputs.digest-standard }}
+          - distroless: ${{ needs.build-and-push.outputs.digest-distroless }}
     steps:
       - uses: slsa-framework/slsa-verifier/actions/installer@v2.7.1
 
       - name: Verify image provenance
         run: |
-          slsa-verifier verify-image ${{ needs.build-and-push.outputs.image }}@${{ needs.build-and-push.outputs.digest }} \
+          slsa-verifier verify-image ${{ needs.build-and-push.outputs.ghcr-repo }}@${{ matrix.digest }} \
             --source-uri github.com/${{ github.repository }} \
-            --source-branch ${{ github.ref_name }} \
+            --source-branch ${{ github.ref_name }}
+
+  verify-dockerhub:
+    needs: [build-and-push, provenance-dockerhub]
+    if: ${{ needs.build-and-push.outputs.use-docker-hub == 'true' && github.ref == 'refs/heads/main' }} # can't use 'env' context
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        digest:
+          - standard: ${{ needs.build-and-push.outputs.digest-standard }}
+          - distroless: ${{ needs.build-and-push.outputs.digest-distroless }}
+    steps:
+      - uses: slsa-framework/slsa-verifier/actions/installer@v2.7.1
+
+      - name: Verify image provenance
+        run: |
+          slsa-verifier verify-image ${{ secrets.DOCKER_HUB_REPO }}@${{ matrix.digest }} \
+            --source-uri github.com/${{ github.repository }} \
+            --source-branch ${{ github.ref_name }}
