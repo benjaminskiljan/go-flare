@@ -7,7 +7,7 @@ on:
   #  tags: [ "v*" ]
 
 env:
-  USE_DOCKER_HUB: false #true
+  USE_DOCKER_HUB: true
   GHCR_REPO: ghcr.io/${{ github.repository }}
 
 jobs:
