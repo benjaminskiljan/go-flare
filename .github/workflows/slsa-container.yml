@@ -9,6 +9,7 @@ on:
 env:
   USE_DOCKER_HUB: true
   GHCR_REPO: ghcr.io/${{ github.repository }}
+  DOCKERHUB_REPO: benjaminskiljanflare/go-flare
 
 jobs:
   build-and-push:
@@ -20,6 +21,7 @@ jobs:
       id-token: write
     outputs:
       use-docker-hub: ${{ env.USE_DOCKER_HUB }}
+      dockerhub-repo: ${{ env.DOCKERHUB_REPO }}
       ghcr-repo: ${{ env.GHCR_REPO }}
       ###################################################################
       digest-standard: ${{ steps.build-standard.outputs.digest }}
@@ -130,10 +132,9 @@ jobs:
           - ${{ needs.build-and-push.outputs.digest-distroless }}
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
     with:
-      image: blank
+      image: ${{ needs.build-and-push.outputs.dockerhub-repo }}
       digest: ${{ matrix.digest }}
     secrets:
-      image: ${{ secrets.DOCKER_HUB_REPO }}
       registry-username: ${{ secrets.DOCKER_HUB_UID }}
       registry-password: ${{ secrets.DOCKER_HUB_PAT }}
     
